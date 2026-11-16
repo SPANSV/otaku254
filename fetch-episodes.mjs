@@ -11,17 +11,20 @@ const MIN_MINUTES = 15;        // shorter than this is a trailer, clip or PV
 const PAGES_PER_CHANNEL = 6;   // 50 uploads per page, newest first
 
 // Official rights holder channels. Unknown handles are skipped and logged.
+// handle is tried first; if it is not found, the name is searched instead.
 const CHANNELS = [
-  "@GundamInfo",
-  "@MuseAsia",
-  "@AniOneAsia",
-  "@Crunchyroll",
-  "@TOEIANIMATIONofficial",
-  "@TMSAnime",
-  "@PonyCanyonAnime",
-  "@AnimeOnegai",
-  "@DiscotekMedia",
-  "@RetroCrush",
+  { handle: "@GundamInfo", name: "GUNDAM.INFO" },
+  { handle: "@MuseAsia", name: "Muse Asia" },
+  { handle: "@AniOneAsia", name: "Ani-One Asia" },
+  { handle: "@Crunchyroll", name: "Crunchyroll" },
+  { handle: "@TOEIANIMATIONofficial", name: "Toei Animation" },
+  { handle: "@TMSAnimeOfficial", name: "TMS Entertainment anime" },
+  { handle: "@ponycanyonanime", name: "Pony Canyon anime" },
+  { handle: "@AnimeOnegaiOficial", name: "Anime Onegai" },
+  { handle: "@DiscotekMediaOfficial", name: "Discotek Media" },
+  { handle: "@RetroCrushTV", name: "RetroCrush" },
+  { handle: "@TokyoMXAnime", name: "Tokyo MX anime" },
+  { handle: "@animelog", name: "Anime Log full episodes" },
 ];
 
 const API = "https://www.googleapis.com/youtube/v3/";
@@ -35,6 +38,7 @@ async function yt(path, params) {
 }
 
 function minutes(iso) {
+  if (!iso) return 0;
   const m = iso.match(/P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/) || [];
   return (+m[1] || 0) * 1440 + (+m[2] || 0) * 60 + (+m[3] || 0) + (+m[4] || 0) / 60;
 }
@@ -49,10 +53,18 @@ function allowedHere(rr) {
 const out = [];
 const report = [];
 
-for (const handle of CHANNELS) {
+for (const { handle, name } of CHANNELS) {
   try {
-    const ch = await yt("channels", { part: "snippet,contentDetails", forHandle: handle });
-    const c = ch.items?.[0];
+    let ch = await yt("channels", { part: "snippet,contentDetails", forHandle: handle });
+    let c = ch.items?.[0], how = "handle";
+    if (!c) {
+      const s = await yt("search", { part: "snippet", type: "channel", q: name, maxResults: 1 });
+      const id = s.items?.[0]?.snippet?.channelId;
+      if (id) {
+        ch = await yt("channels", { part: "snippet,contentDetails", id });
+        c = ch.items?.[0]; how = "search";
+      }
+    }
     if (!c) { report.push(`${handle}: not found`); continue; }
     const uploads = c.contentDetails.relatedPlaylists.uploads;
     let token = "", ids = [];
@@ -66,6 +78,7 @@ for (const handle of CHANNELS) {
     for (let i = 0; i < ids.length; i += 50) {
       const v = await yt("videos", { part: "snippet,contentDetails,status", id: ids.slice(i, i + 50).join(",") });
       for (const x of v.items) {
+        if (!x.contentDetails || !x.status || !x.snippet) continue;
         const mins = minutes(x.contentDetails.duration);
         if (mins < MIN_MINUTES) continue;
         if (!x.status.embeddable || x.status.privacyStatus !== "public") continue;
@@ -82,7 +95,7 @@ for (const handle of CHANNELS) {
         kept++;
       }
     }
-    report.push(`${handle} (${c.snippet.title}): ${ids.length} uploads checked, ${kept} episodes playable in ${REGION}`);
+    report.push(`${handle} -> ${c.snippet.title} (via ${how}): ${ids.length} uploads checked, ${kept} episodes playable in ${REGION}`);
   } catch (e) {
     report.push(`${handle}: error ${e.message}`);
   }
