@@ -112,6 +112,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:6px 16px;justify-content:space-betw
     </div>
     <nav role="tablist">
       <button role="tab" data-tab="trending" aria-selected="true" data-i18n="tTrending">Trending</button>
+      <button role="tab" data-tab="episodes" aria-selected="false" data-i18n="tEpisodes">Episodes</button>
       <button role="tab" data-tab="watch" aria-selected="false" data-i18n="tWatch">Watch trailers</button>
       <button role="tab" data-tab="schedule" aria-selected="false" data-i18n="tSchedule">This week</button>
       <button role="tab" data-tab="search" aria-selected="false" data-i18n="tSearch">Search</button>
@@ -139,7 +140,9 @@ const TZ = "Africa/Nairobi";
 
 /* ---------- copy ---------- */
 const T = {
-  en:{tTrending:"Trending",tSchedule:"This week",tWatch:"Watch trailers",
+  en:{tTrending:"Trending",tSchedule:"This week",tWatch:"Watch trailers",tEpisodes:"Episodes",
+    hEpisodes:"Free episodes",sEpisodes:"Full episodes posted free by official anime channels, checked daily to make sure they play in Kenya.",
+    epFilter:"Filter by title or channel",epAll:"All channels",epNone:"No episodes yet. The list refreshes once a day.",epUpdated:"Updated",min:"min",
     hWatch:"Watch trailers",sWatch:"Official trailers for the most popular shows right now and the ones coming next season. Tap to play.",
     play:"▶ Play trailer",next2:"Next trailer ›",prev2:"‹ Previous",close:"Close",details:"Details",now:"Popular now",soon:"Coming soon",tSearch:"Search",tList:"My list",
     hTrending:"Trending now",sTrending:"What anime fans are watching this season. Tap any show to see where to watch it legally.",
@@ -152,7 +155,9 @@ const T = {
     kenya:"Availability differs by country. Some services may not carry this title in Kenya.",
     save:"Save to my list",saved:"Saved ✓",share:"Copy link",copied:"Link copied",open:"Open",
     today:"Today",tomorrow:"Tomorrow",in:"in",d:"d",h:"h",m:"m",foot:"Anime data from AniList. Otaku254 links only to official, licensed streams."},
-  sw:{tTrending:"Zinazovuma",tSchedule:"Wiki hii",tWatch:"Tazama trela",
+  sw:{tTrending:"Zinazovuma",tSchedule:"Wiki hii",tWatch:"Tazama trela",tEpisodes:"Vipindi",
+    hEpisodes:"Vipindi vya bure",sEpisodes:"Vipindi kamili vilivyowekwa bure na chaneli rasmi za anime, vinakaguliwa kila siku kuhakikisha vinacheza Kenya.",
+    epFilter:"Chuja kwa jina au chaneli",epAll:"Chaneli zote",epNone:"Bado hakuna vipindi. Orodha husasishwa mara moja kwa siku.",epUpdated:"Imesasishwa",min:"dk",
     hWatch:"Tazama trela",sWatch:"Trela rasmi za vipindi maarufu sasa na vile vinavyokuja msimu ujao. Gusa ili kucheza.",
     play:"▶ Cheza trela",next2:"Trela inayofuata ›",prev2:"‹ Iliyotangulia",close:"Funga",details:"Maelezo",now:"Maarufu sasa",soon:"Zinakuja hivi karibuni",tSearch:"Tafuta",tList:"Orodha yangu",
     hTrending:"Zinazovuma sasa",sTrending:"Anime ambazo mashabiki wanatazama msimu huu. Gusa kipindi kuona mahali pa kutazama kihalali.",
@@ -227,7 +232,7 @@ const errBox = fn => `<div class="err">${t("err")}<br><br><button class="btn" id
 function head(h,s){return `<h1>${t(h)}</h1><p class="sub">${t(s)}</p>`}
 
 /* ---------- views ---------- */
-let tab = "trending", searchTerm = "";
+let tab = "trending", searchTerm = "", epData = null, epQuery = "", epChannel = "";
 const views = {
   async trending(v){
     v.innerHTML = head("hTrending","sTrending")+skeleton(12);
@@ -239,13 +244,44 @@ const views = {
     const d = await gql(Q.trailers);
     const yt = list => list.filter(m=>m.trailer?.site==="youtube"&&m.trailer.id);
     const now = yt(d.now.media), soon = yt(d.soon.media);
-    playlist = [...now, ...soon];
-    const row = list => `<div class="tgrid">${list.map(m=>`<button class="tcard" data-play="${m.id}">
+    playlist = [...now, ...soon].map(m=>({vid:m.trailer.id,name:title(m),ani:m.id}));
+    const row = list => `<div class="tgrid">${list.map(m=>`<button class="tcard" data-play="${esc(m.trailer.id)}">
       <div class="thumb"><img loading="lazy" src="https://i.ytimg.com/vi/${esc(m.trailer.id)}/hqdefault.jpg" alt=""><span class="playic">▶</span></div>
       <div class="ct">${esc(title(m))}</div></button>`).join("")}</div>`;
     v.innerHTML = head("hWatch","sWatch")
       + `<div class="day">${t("now")}<span>${now.length}</span></div>` + row(now)
       + (soon.length?`<div class="day">${t("soon")}<span>${soon.length}</span></div>` + row(soon):"");
+  },
+  async episodes(v){
+    v.innerHTML = head("hEpisodes","sEpisodes")+skeleton(6);
+    if(!epData){
+      const r = await fetch("episodes.json",{cache:"no-store"});
+      if(!r.ok) throw new Error("episodes.json "+r.status);
+      epData = await r.json();
+    }
+    const eps = epData.episodes||[];
+    const channels = [...new Set(eps.map(e=>e.channel))].sort();
+    const upd = epData.updated ? new Date(epData.updated).toLocaleDateString(lang==="sw"?"sw-KE":"en-KE",{timeZone:TZ,day:"numeric",month:"short",year:"numeric"}) : "";
+    v.innerHTML = head("hEpisodes","sEpisodes")
+      + (eps.length ? `<form class="search" id="eform" role="search">
+          <input id="ebox" type="search" placeholder="${esc(t("epFilter"))}" value="${esc(epQuery)}" autocomplete="off">
+          <select id="ech" class="btn" aria-label="Channel"><option value="">${t("epAll")}</option>${channels.map(c=>`<option ${c===epChannel?"selected":""}>${esc(c)}</option>`).join("")}</select>
+        </form><p class="note" style="margin:-8px 0 16px">${t("epUpdated")}: ${esc(upd)} · ${eps.length}</p><div id="elist"></div>`
+      : `<div class="empty">${t("epNone")}</div>`);
+    if(!eps.length) return;
+    const draw = () => {
+      const q = epQuery.toLowerCase();
+      const list = eps.filter(e=>(!epChannel||e.channel===epChannel)&&(!q||(e.title+" "+e.channel).toLowerCase().includes(q))).slice(0,120);
+      playlist = list.map(e=>({vid:e.id,name:e.title}));
+      $("#elist").innerHTML = list.length ? `<div class="tgrid">${list.map(e=>`<button class="tcard" data-play="${esc(e.id)}">
+        <div class="thumb"><img loading="lazy" src="https://i.ytimg.com/vi/${esc(e.id)}/hqdefault.jpg" alt=""><span class="playic">▶</span><span class="score">${e.minutes} ${t("min")}</span></div>
+        <div class="ct">${esc(e.title)}</div><div class="meta">${esc(e.channel)}</div></button>`).join("")}</div>`
+        : `<div class="empty">${t("noRes")}</div>`;
+    };
+    $("#eform").addEventListener("submit",e=>e.preventDefault());
+    $("#ebox").addEventListener("input",e=>{epQuery=e.target.value.trim();draw()});
+    $("#ech").addEventListener("change",e=>{epChannel=e.target.value;draw()});
+    draw();
   },
   async schedule(v){
     v.innerHTML = head("hSchedule","sSchedule")+skeleton(8);
@@ -325,7 +361,7 @@ async function openDetail(id){
         ${desc?`<p class="desc">${esc(desc).replace(/\n/g,"<br>")}</p>`:""}
       </div>`;
     $("#close").onclick=closeDetail;
-    if(yt) $("#playtr").onclick=()=>{playlist=[{id:m.id,title:m.title,trailer:m.trailer}];openPlayer(0)};
+    if(yt) $("#playtr").onclick=()=>{playlist=[{vid:yt,name:title(m),ani:m.id}];openPlayer(0)};
     $("#save").onclick=e=>{
       const i=myList.findIndex(x=>x.id===m.id);
       if(i>=0){myList.splice(i,1);e.target.textContent=t("save")}
@@ -347,14 +383,14 @@ function openPlayer(i){
   pIndex = (i + playlist.length) % playlist.length;
   const m = playlist[pIndex], p = $("#player");
   const multi = playlist.length > 1;
-  p.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${esc(m.trailer.id)}?autoplay=1&rel=0&playsinline=1" title="${esc(title(m))} trailer" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>
-    <div class="pbar"><span class="pt">${esc(title(m))}</span>
+  p.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${esc(m.vid)}?autoplay=1&rel=0&playsinline=1" title="${esc(m.name)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>
+    <div class="pbar"><span class="pt">${esc(m.name)}</span>
       ${multi?`<button class="btn" id="pprev">${t("prev2")}</button><button class="btn primary" id="pnext">${t("next2")}</button>`:""}
-      <button class="btn" id="pinfo">${t("details")}</button>
+      ${m.ani?`<button class="btn" id="pinfo">${t("details")}</button>`:""}
       <button class="btn" id="pclose">${t("close")}</button></div>`;
   p.hidden = false; document.body.style.overflow = "hidden";
   $("#pclose").onclick = closePlayer;
-  $("#pinfo").onclick = () => { const id = m.id; closePlayer(); openDetail(id); };
+  if(m.ani) $("#pinfo").onclick = () => { const id = m.ani; closePlayer(); openDetail(id); };
   if(multi){ $("#pnext").onclick = () => openPlayer(pIndex+1); $("#pprev").onclick = () => openPlayer(pIndex-1); }
 }
 function closePlayer(){ const p=$("#player"); p.innerHTML=""; p.hidden=true; if($("#sheet").hidden) document.body.style.overflow=""; }
@@ -376,7 +412,7 @@ document.querySelector("nav").addEventListener("click",e=>{
   render();
 });
 document.addEventListener("click",e=>{
-  const tp=e.target.closest(".tcard[data-play]"); if(tp){openPlayer(playlist.findIndex(m=>m.id===+tp.dataset.play));return}
+  const tp=e.target.closest(".tcard[data-play]"); if(tp){openPlayer(Math.max(0,playlist.findIndex(m=>m.vid===tp.dataset.play)));return}
   const c=e.target.closest(".card[data-id]"); if(c){openDetail(+c.dataset.id);return}
   if(e.target.id==="retry") render();
 });
