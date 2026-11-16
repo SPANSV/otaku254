@@ -15,7 +15,7 @@ jobs:
           node-version: 20
       - run: node fetch-episodes.mjs
         env:
-          YT_API_KEY: ${{ secrets.YT_API_KEY }}
+          YT_API_KEY: ${{ secrets.YOUTUBE_OTAKU254 }}
       - run: |
           git config user.name "otaku254-bot"
           git config user.email "otaku254-bot@users.noreply.github.com"
