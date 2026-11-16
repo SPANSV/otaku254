@@ -23,7 +23,6 @@ const CHANNELS = [
   { handle: "@AnimeOnegaiOficial", name: "Anime Onegai" },
   { handle: "@DiscotekMediaOfficial", name: "Discotek Media" },
   { handle: "@RetroCrushTV", name: "RetroCrush" },
-  { handle: "@TokyoMXAnime", name: "Tokyo MX anime" },
   { handle: "@animelog", name: "Anime Log full episodes" },
 ];
 
