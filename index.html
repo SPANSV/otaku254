@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Otaku254</title>
+<meta name="description" content="Kenya's anime guide: what's trending, what airs this week in EAT, and where to watch it legally.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: sticky top bar with tabs, responsive poster grid, slide-in detail sheet */
+:root{
+  --bg:#f6f4f7; --surface:#ffffff; --fg:#17141c; --muted:#6c6475; --line:#e4dfe9;
+  --accent:#d6362b; --accent-fg:#ffffff; --green:#14804a; --chip:#efeaf3;
+  --display:"Sora",system-ui,sans-serif; --body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#110e15; --surface:#1b1721; --fg:#f2eef6; --muted:#a59cb0; --line:#2c2634;
+  --accent:#ff5a4a; --accent-fg:#160806; --green:#3ccf86; --chip:#26202e; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#110e15; --surface:#1b1721; --fg:#f2eef6; --muted:#a59cb0; --line:#2c2634;
+  --accent:#ff5a4a; --accent-fg:#160806; --green:#3ccf86; --chip:#26202e; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font:15px/1.5 var(--body);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top,0px)}
+.bar{display:flex;align-items:center;gap:12px;padding-block:12px;flex-wrap:wrap}
+.logo{font:800 22px/1 var(--display);letter-spacing:-.02em;margin-right:auto}
+.logo b{color:var(--accent)}
+.lang{display:flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+.lang button{border:0;background:none;color:var(--muted);font:600 12px var(--body);padding:6px 11px;cursor:pointer;letter-spacing:.04em}
+.lang button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+nav{display:flex;gap:4px;overflow-x:auto;padding-bottom:10px;scrollbar-width:none}
+nav button{flex:none;border:0;background:none;color:var(--muted);font:600 14px var(--body);padding:8px 14px;border-radius:999px;cursor:pointer}
+nav button[aria-selected="true"]{background:var(--accent);color:var(--accent-fg)}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+main{padding-block:20px 48px}
+h1{font:700 clamp(22px,4vw,30px)/1.15 var(--display);letter-spacing:-.02em;margin:4px 0 4px;text-wrap:balance}
+.sub{color:var(--muted);margin:0 0 18px;max-width:62ch}
+.search{display:flex;gap:8px;margin-bottom:18px}
+.search input{flex:1;min-width:0;font:15px var(--body);padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--fg)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:18px 14px}
+.card{all:unset;cursor:pointer;display:flex;flex-direction:column;gap:8px;min-width:0}
+.poster{position:relative;aspect-ratio:2/3;width:100%;border-radius:10px;overflow:hidden;background:var(--chip)}
+.poster img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s}
+.card:hover .poster img{transform:scale(1.04)}
+.score{position:absolute;top:8px;left:8px;background:rgba(0,0,0,.72);color:#fff;font:600 12px var(--body);padding:3px 7px;border-radius:6px}
+.ep{position:absolute;left:0;right:0;bottom:0;padding:20px 8px 7px;background:linear-gradient(transparent,rgba(0,0,0,.82));color:#fff;font:600 12px var(--body)}
+.ct{font:600 14px/1.3 var(--body);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.meta{color:var(--muted);font-size:12px;margin-top:-4px}
+.day{margin:26px 0 12px;font:700 15px var(--display);display:flex;align-items:baseline;gap:10px}
+.day span{color:var(--muted);font:500 13px var(--body)}
+.day:first-of-type{margin-top:4px}
+.empty,.err{padding:40px 0;color:var(--muted);text-align:center}
+.skel .poster{animation:pulse 1.2s infinite alternate}
+@keyframes pulse{to{opacity:.45}}
+/* detail sheet */
+.scrim{position:fixed;inset:0;background:rgba(10,6,14,.55);z-index:40}
+.sheet{position:fixed;top:0;right:0;bottom:0;width:min(560px,100%);background:var(--surface);z-index:41;overflow-y:auto;box-shadow:-20px 0 60px rgba(0,0,0,.3);padding-bottom:env(safe-area-inset-bottom,0px)}
+.banner{height:170px;background:var(--chip) center/cover;position:relative}
+.close{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));right:12px;border:0;background:rgba(0,0,0,.6);color:#fff;width:36px;height:36px;border-radius:50%;font-size:20px;cursor:pointer}
+.sbody{padding:0 20px 28px;display:flex;flex-direction:column;gap:16px}
+.head{display:flex;gap:16px;margin-top:-60px;position:relative;align-items:flex-end}
+.head img{width:110px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.35);flex:none}
+.head h2{font:700 20px/1.2 var(--display);margin:0;text-wrap:balance}
+.head .alt{color:var(--muted);font-size:13px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:var(--chip);border-radius:999px;padding:4px 10px;font-size:12px;font-weight:500}
+.next{background:var(--chip);border-radius:12px;padding:12px 14px;font-weight:500}
+.next strong{color:var(--accent)}
+.desc{color:var(--fg);opacity:.88;margin:0;max-width:65ch}
+h3{font:700 14px var(--display);margin:0;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.watch{display:flex;flex-direction:column;gap:8px}
+.watch a{display:flex;align-items:center;justify-content:space-between;gap:10px;text-decoration:none;color:var(--fg);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-weight:600}
+.watch a:hover{border-color:var(--green)}
+.watch a span{color:var(--green);font-size:13px}
+.note{font-size:12px;color:var(--muted);margin:0}
+.trailer{aspect-ratio:16/9;width:100%;max-width:100%;border:0;border-radius:12px;background:#000}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:none;color:var(--fg);font:600 14px var(--body);padding:10px 16px;border-radius:999px;cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+footer{border-top:1px solid var(--line);padding-block:20px;color:var(--muted);font-size:12px}
+footer .wrap{display:flex;flex-wrap:wrap;gap:6px 16px;justify-content:space-between}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="bar">
+      <div class="logo">Otaku<b>254</b></div>
+      <div class="lang" role="group" aria-label="Language">
+        <button id="lang-en" data-lang="en" aria-pressed="true">EN</button>
+        <button id="lang-sw" data-lang="sw" aria-pressed="false">SW</button>
+      </div>
+    </div>
+    <nav role="tablist">
+      <button role="tab" data-tab="trending" aria-selected="true" data-i18n="tTrending">Trending</button>
+      <button role="tab" data-tab="schedule" aria-selected="false" data-i18n="tSchedule">This week</button>
+      <button role="tab" data-tab="search" aria-selected="false" data-i18n="tSearch">Search</button>
+      <button role="tab" data-tab="list" aria-selected="false" data-i18n="tList">My list</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap" id="view" aria-live="polite"></main>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="sheet" id="sheet" hidden aria-modal="true" role="dialog"></aside>
+
+<footer>
+  <div class="wrap">
+    <span data-i18n="foot">Anime data from AniList. Otaku254 links only to official, licensed streams.</span>
+    <span>Otaku254 · Made in Kenya</span>
+  </div>
+</footer>
+
+<script>
+const API = "https://graphql.anilist.co";
+const TZ = "Africa/Nairobi";
+
+/* ---------- copy ---------- */
+const T = {
+  en:{tTrending:"Trending",tSchedule:"This week",tSearch:"Search",tList:"My list",
+    hTrending:"Trending now",sTrending:"What anime fans are watching this season. Tap any show to see where to watch it legally.",
+    hSchedule:"Airing this week",sSchedule:"New episodes over the next 7 days, in Nairobi time (EAT).",
+    hSearch:"Find a show",sSearch:"Search by English or Japanese title.",ph:"e.g. One Piece, Solo Leveling, Frieren",
+    hList:"My list",sList:"Shows you've saved on this phone or browser.",emptyList:"Nothing saved yet. Open any show and tap Save.",
+    noRes:"No shows matched that search.",err:"Couldn't reach AniList. Check your connection and try again.",retry:"Try again",
+    ep:"Ep",eps:"episodes",next:"Episode {n} airs {when}",watch:"Where to watch",trailer:"Official trailer",
+    noWatch:"No official streaming link listed yet. Check back closer to release.",
+    kenya:"Availability differs by country. Some services may not carry this title in Kenya.",
+    save:"Save to my list",saved:"Saved ✓",share:"Copy link",copied:"Link copied",open:"Open",
+    today:"Today",tomorrow:"Tomorrow",in:"in",d:"d",h:"h",m:"m",foot:"Anime data from AniList. Otaku254 links only to official, licensed streams."},
+  sw:{tTrending:"Zinazovuma",tSchedule:"Wiki hii",tSearch:"Tafuta",tList:"Orodha yangu",
+    hTrending:"Zinazovuma sasa",sTrending:"Anime ambazo mashabiki wanatazama msimu huu. Gusa kipindi kuona mahali pa kutazama kihalali.",
+    hSchedule:"Zinazopeperushwa wiki hii",sSchedule:"Vipindi vipya ndani ya siku 7 zijazo, kwa saa za Nairobi (EAT).",
+    hSearch:"Tafuta kipindi",sSearch:"Tafuta kwa jina la Kiingereza au Kijapani.",ph:"mfano One Piece, Solo Leveling, Frieren",
+    hList:"Orodha yangu",sList:"Vipindi ulivyohifadhi kwenye simu au kivinjari hiki.",emptyList:"Bado hujahifadhi chochote. Fungua kipindi na ubonyeze Hifadhi.",
+    noRes:"Hakuna kipindi kilicholingana na utafutaji huo.",err:"Imeshindwa kufikia AniList. Angalia mtandao wako ujaribu tena.",retry:"Jaribu tena",
+    ep:"Sehemu",eps:"sehemu",next:"Sehemu ya {n} itatoka {when}",watch:"Mahali pa kutazama",trailer:"Trela rasmi",
+    noWatch:"Bado hakuna kiungo rasmi cha kutazama. Rudi karibu na tarehe ya kutoka.",
+    kenya:"Upatikanaji hutofautiana kwa nchi. Huenda baadhi ya huduma hazina kipindi hiki Kenya.",
+    save:"Hifadhi kwenye orodha",saved:"Imehifadhiwa ✓",share:"Nakili kiungo",copied:"Kiungo kimenakiliwa",open:"Fungua",
+    today:"Leo",tomorrow:"Kesho",in:"baada ya",d:"s",h:"saa",m:"dk",foot:"Data ya anime kutoka AniList. Otaku254 inaunganisha tu na huduma rasmi zenye leseni."}
+};
+let lang = load("o254-lang","en");
+const t = k => (T[lang][k] ?? T.en[k]);
+
+/* ---------- storage (best effort) ---------- */
+function load(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}}
+function save(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
+let myList = load("o254-list",[]); // [{id,title,cover,score}]
+
+/* ---------- AniList ---------- */
+const CARD = `id title{romaji english} coverImage{large color} averageScore episodes format seasonYear nextAiringEpisode{episode airingAt}`;
+const cache = new Map();
+async function gql(query, variables={}){
+  const key = query+JSON.stringify(variables);
+  const hit = cache.get(key);
+  if(hit && Date.now()-hit.at < 5*60e3) return hit.data;
+  const r = await fetch(API,{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify({query,variables})});
+  if(!r.ok) throw new Error("HTTP "+r.status);
+  const j = await r.json();
+  if(j.errors) throw new Error(j.errors[0].message);
+  cache.set(key,{at:Date.now(),data:j.data});
+  return j.data;
+}
+const Q = {
+  trending:`query{Page(perPage:30){media(type:ANIME,sort:TRENDING_DESC,isAdult:false){${CARD}}}}`,
+  search:`query($s:String){Page(perPage:30){media(type:ANIME,search:$s,isAdult:false,sort:SEARCH_MATCH){${CARD}}}}`,
+  schedule:`query($a:Int,$b:Int,$p:Int){Page(page:$p,perPage:50){pageInfo{hasNextPage} airingSchedules(airingAt_greater:$a,airingAt_lesser:$b,sort:TIME){episode airingAt media{isAdult popularity ${CARD}}}}}`,
+  detail:`query($id:Int){Media(id:$id){${CARD} bannerImage description(asHtml:false) genres status studios(isMain:true){nodes{name}} trailer{id site} externalLinks{site url type}}}`
+};
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const title = m => m.title.english || m.title.romaji;
+function countdown(sec){
+  const d=Math.floor(sec/86400),h=Math.floor(sec%86400/3600),m=Math.floor(sec%3600/60);
+  return d?`${d}${t("d")} ${h}${t("h")}`:h?`${h}${t("h")} ${m}${t("m")}`:`${m}${t("m")}`;
+}
+function eatTime(ts){return new Date(ts*1000).toLocaleTimeString(lang==="sw"?"sw-KE":"en-KE",{timeZone:TZ,hour:"2-digit",minute:"2-digit",hour12:false})}
+function eatDayKey(ts){return new Date(ts*1000).toLocaleDateString("en-CA",{timeZone:TZ})}
+function eatDayLabel(ts){
+  const k=eatDayKey(ts), now=Date.now()/1000;
+  if(k===eatDayKey(now)) return t("today");
+  if(k===eatDayKey(now+86400)) return t("tomorrow");
+  return new Date(ts*1000).toLocaleDateString(lang==="sw"?"sw-KE":"en-KE",{timeZone:TZ,weekday:"long",day:"numeric",month:"short"});
+}
+function cardHTML(m, epLine){
+  const sc = m.averageScore ? `<span class="score">★ ${(m.averageScore/10).toFixed(1)}</span>` : "";
+  const ep = epLine ?? (m.nextAiringEpisode ? `${t("ep")} ${m.nextAiringEpisode.episode} · ${t("in")} ${countdown(m.nextAiringEpisode.airingAt-Date.now()/1000)}` : "");
+  const meta = [m.format?.replace("_"," "), m.seasonYear, m.episodes?`${m.episodes} ${t("eps")}`:null].filter(Boolean).join(" · ");
+  return `<button class="card" data-id="${m.id}">
+    <div class="poster" style="background:${esc(m.coverImage?.color||"")}">
+      <img loading="lazy" src="${esc(m.coverImage?.large)}" alt="">${sc}${ep?`<span class="ep">${esc(ep)}</span>`:""}
+    </div>
+    <div class="ct">${esc(title(m))}</div><div class="meta">${esc(meta)}</div></button>`;
+}
+const skeleton = n => `<div class="grid skel">${'<div class="card"><div class="poster"></div></div>'.repeat(n)}</div>`;
+const errBox = fn => `<div class="err">${t("err")}<br><br><button class="btn" id="retry">${t("retry")}</button></div>`;
+function head(h,s){return `<h1>${t(h)}</h1><p class="sub">${t(s)}</p>`}
+
+/* ---------- views ---------- */
+let tab = "trending", searchTerm = "";
+const views = {
+  async trending(v){
+    v.innerHTML = head("hTrending","sTrending")+skeleton(12);
+    const d = await gql(Q.trending);
+    v.innerHTML = head("hTrending","sTrending")+`<div class="grid">${d.Page.media.map(m=>cardHTML(m)).join("")}</div>`;
+  },
+  async schedule(v){
+    v.innerHTML = head("hSchedule","sSchedule")+skeleton(8);
+    const a=Math.floor(Date.now()/1000), b=a+7*86400; let all=[];
+    for(let p=1;p<=4;p++){
+      const d=await gql(Q.schedule,{a,b,p});
+      all=all.concat(d.Page.airingSchedules);
+      if(!d.Page.pageInfo.hasNextPage) break;
+    }
+    all = all.filter(s=>!s.media.isAdult && s.media.popularity>2000);
+    const days = {};
+    for(const s of all){(days[eatDayKey(s.airingAt)] ??= []).push(s)}
+    let html = head("hSchedule","sSchedule");
+    for(const k of Object.keys(days)){
+      const list=days[k];
+      html += `<div class="day">${esc(eatDayLabel(list[0].airingAt))}<span>${list.length}</span></div>
+        <div class="grid">${list.map(s=>cardHTML(s.media,`${t("ep")} ${s.episode} · ${eatTime(s.airingAt)} EAT`)).join("")}</div>`;
+    }
+    v.innerHTML = html;
+  },
+  async search(v){
+    v.innerHTML = head("hSearch","sSearch")+`<form class="search" id="sform"><input id="sbox" type="search" placeholder="${esc(t("ph"))}" value="${esc(searchTerm)}" autocomplete="off"><button class="btn primary">${t("tSearch")}</button></form><div id="sres"></div>`;
+    $("#sform").addEventListener("submit",e=>{e.preventDefault();searchTerm=$("#sbox").value.trim();runSearch()});
+    let timer; $("#sbox").addEventListener("input",e=>{clearTimeout(timer);timer=setTimeout(()=>{searchTerm=e.target.value.trim();runSearch()},450)});
+    if(searchTerm) runSearch(); else $("#sbox").focus();
+  },
+  async list(v){
+    v.innerHTML = head("hList","sList") + (myList.length
+      ? `<div class="grid">${myList.map(m=>cardHTML({id:m.id,title:{english:m.title},coverImage:{large:m.cover},averageScore:m.score},"")).join("")}</div>`
+      : `<div class="empty">${t("emptyList")}</div>`);
+  }
+};
+async function runSearch(){
+  const box=$("#sres"); if(!box) return;
+  if(searchTerm.length<2){box.innerHTML="";return}
+  box.innerHTML=skeleton(6);
+  try{
+    const d=await gql(Q.search,{s:searchTerm});
+    box.innerHTML = d.Page.media.length?`<div class="grid">${d.Page.media.map(m=>cardHTML(m)).join("")}</div>`:`<div class="empty">${t("noRes")}</div>`;
+  }catch{box.innerHTML=errBox()}
+}
+async function render(){
+  const v=$("#view");
+  try{await views[tab](v)}catch(e){console.error(e);v.innerHTML=errBox()}
+}
+
+/* ---------- detail sheet ---------- */
+async function openDetail(id){
+  const sh=$("#sheet"); $("#scrim").hidden=false; sh.hidden=false; document.body.style.overflow="hidden";
+  sh.innerHTML=`<div class="banner"></div><div class="sbody"><p class="note">…</p></div>`;
+  try{
+    const {Media:m}=await gql(Q.detail,{id});
+    const streams=(m.externalLinks||[]).filter(l=>l.type==="STREAMING");
+    const desc=(m.description||"").replace(/<br\s*\/?>/gi,"\n").replace(/<[^>]+>/g,"").replace(/\n{2,}/g,"\n").trim();
+    const inList=myList.some(x=>x.id===m.id);
+    const nx=m.nextAiringEpisode;
+    const yt = m.trailer?.site==="youtube" ? m.trailer.id : null;
+    sh.innerHTML=`
+      <div class="banner" style="background-image:url('${esc(m.bannerImage||m.coverImage.large)}')"><button class="close" id="close" aria-label="Close">×</button></div>
+      <div class="sbody">
+        <div class="head"><img src="${esc(m.coverImage.large)}" alt=""><div>
+          <h2>${esc(title(m))}</h2>
+          ${m.title.english&&m.title.romaji!==m.title.english?`<div class="alt">${esc(m.title.romaji)}</div>`:""}
+          <div class="alt">${[m.studios?.nodes?.[0]?.name,m.seasonYear,m.averageScore?`★ ${(m.averageScore/10).toFixed(1)}`:null].filter(Boolean).map(esc).join(" · ")}</div>
+        </div></div>
+        <div class="chips">${(m.genres||[]).map(g=>`<span class="chip">${esc(g)}</span>`).join("")}</div>
+        ${nx?`<div class="next">${t("next").replace("{n}",nx.episode).replace("{when}",`<strong>${eatDayLabel(nx.airingAt)} ${eatTime(nx.airingAt)} EAT</strong>`)}</div>`:""}
+        <div class="actions">
+          <button class="btn primary" id="save">${inList?t("saved"):t("save")}</button>
+          <button class="btn" id="share">${t("share")}</button>
+        </div>
+        <h3>${t("watch")}</h3>
+        <div class="watch">${streams.length?streams.map(l=>`<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.site)}<span>${t("open")} ↗</span></a>`).join(""):`<p class="note">${t("noWatch")}</p>`}</div>
+        ${streams.length?`<p class="note">${t("kenya")}</p>`:""}
+        ${yt?`<h3>${t("trailer")}</h3><iframe class="trailer" src="https://www.youtube-nocookie.com/embed/${esc(yt)}" title="Trailer" allow="encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe>`:""}
+        ${desc?`<p class="desc">${esc(desc).replace(/\n/g,"<br>")}</p>`:""}
+      </div>`;
+    $("#close").onclick=closeDetail;
+    $("#save").onclick=e=>{
+      const i=myList.findIndex(x=>x.id===m.id);
+      if(i>=0){myList.splice(i,1);e.target.textContent=t("save")}
+      else{myList.unshift({id:m.id,title:title(m),cover:m.coverImage.large,score:m.averageScore});e.target.textContent=t("saved")}
+      save("o254-list",myList); if(tab==="list") render();
+    };
+    $("#share").onclick=async e=>{
+      const url=location.origin+location.pathname+"#anime-"+m.id;
+      try{await navigator.clipboard.writeText(url);e.target.textContent=t("copied")}catch{prompt?.("",url)}
+    };
+    history.replaceState(null,"","#anime-"+m.id);
+  }catch(e){console.error(e);sh.querySelector(".sbody").innerHTML=errBox()}
+}
+function closeDetail(){$("#sheet").hidden=true;$("#scrim").hidden=true;document.body.style.overflow="";history.replaceState(null,"",location.pathname)}
+
+/* ---------- wiring ---------- */
+function applyLang(){
+  document.documentElement.lang=lang;
+  document.querySelectorAll("[data-i18n]").forEach(el=>el.textContent=t(el.dataset.i18n));
+  document.querySelectorAll(".lang button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.lang===lang));
+}
+document.querySelector(".lang").addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b) return;
+  lang=b.dataset.lang; save("o254-lang",lang); applyLang(); render();
+});
+document.querySelector("nav").addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b) return;
+  tab=b.dataset.tab;
+  document.querySelectorAll("nav button").forEach(x=>x.setAttribute("aria-selected",x===b));
+  render();
+});
+document.addEventListener("click",e=>{
+  const c=e.target.closest(".card[data-id]"); if(c){openDetail(+c.dataset.id);return}
+  if(e.target.id==="retry") render();
+});
+$("#scrim").onclick=closeDetail;
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#sheet").hidden) closeDetail()});
+
+applyLang(); render();
+const deep=location.hash.match(/^#anime-(\d+)$/); if(deep) openDetail(+deep[1]);
+</script>
+</body>
+</html>
